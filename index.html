@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador de Modelado Epidemiológico - ISP Javeriana</title>
+    <title>Modelado Matemático de Enfermedades Infecciosas - ISP Javeriana</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -16,9 +15,6 @@
             --text-medium: #4b5563;
             --bg-light: #f9fafb;
             --border-color: #d1d5db;
-            --susceptible-color: #60a5fa;
-            --infected-color: #f87171;
-            --recovered-color: #34d399;
         }
         body {
             font-family: 'Inter', sans-serif;
@@ -26,6 +22,18 @@
             color: var(--text-dark);
         }
         .container { max-width: 1100px; margin: 2rem auto; padding: 2rem; }
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+        .logo-container img {
+            height: 60px;
+            max-width: 200px;
+            object-fit: contain;
+        }
         .main-title { font-size: 2.25rem; font-weight: 700; color: var(--javeriana-blue); text-align: center; margin-bottom: 0.25rem; }
         .institutional-credit { font-size: 0.9rem; color: var(--javeriana-gray); text-align: center; margin-bottom: 0.5rem; }
         .subtitle { font-size: 1.25rem; color: var(--text-medium); text-align: center; margin-bottom: 2.5rem; }
@@ -34,22 +42,65 @@
         .content-card { background-color: #ffffff; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.07); }
         .content-card h3 { font-size: 1.375rem; font-weight: 600; color: var(--javeriana-blue); margin-bottom: 1rem; }
         
-        /* Gamified SIR Simulator Styles */
-        .sir-gamified-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem; align-items: flex-start; }
-        .simulation-area { border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 1rem; background: #fff; }
-        .compartment { width: 100%; min-height: 180px; padding: 0.5rem; border: 2px dashed var(--javeriana-gray); border-radius: 0.375rem; text-align: center; margin-bottom: 1rem; }
+        /* Dynamic SIR Step-by-Step Styles */
+        .sir-simulation-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            border-radius: 0.5rem;
+            background-color: #fff;
+            margin-bottom: 1.5rem;
+            position: relative; 
+        }
+        .sir-compartments {
+            display: flex;
+            justify-content: space-around; 
+            width: 100%;
+            margin-bottom: 1rem;
+            min-height: 150px; 
+            position: relative; 
+        }
+        .compartment {
+            width: 28%; 
+            padding: 0.5rem;
+            border: 2px dashed var(--javeriana-gray);
+            border-radius: 0.375rem;
+            text-align: center;
+            position: relative; 
+            z-index: 1; 
+            background-color: #fff; 
+        }
         .compartment-title { font-weight: 600; color: var(--javeriana-blue); }
         .individuals-container { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; padding: 0.5rem; }
-        .individual-icon { width: 12px; height: 12px; }
-        .susceptible { fill: var(--susceptible-color); }
-        .infected { fill: var(--infected-color); }
-        .recovered { fill: var(--recovered-color); }
-        .controls-area { border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 1rem; background: #fff; }
-        .controls-area label { font-weight: 500; color: var(--text-dark); margin-bottom: 0.25rem; display: block; }
-        .controls-area input[type="range"] { width: 100%; }
-        .controls-area .value-display { color: var(--javeriana-blue); font-weight: 600; }
-        .controls-area button { background-color: var(--javeriana-blue); color: white; padding: 0.7rem 1.3rem; border-radius: 0.375rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s; width: 100%; margin-top: 1rem; }
-        .controls-area button:hover { background-color: #002269; }
+        .individual-icon { width: 16px; height: 16px; transition: fill 0.5s ease; }
+        .susceptible { fill: #60a5fa; }
+        .infected { fill: #f87171; }
+        .recovered { fill: #34d399; }
+
+        .flow-arrow { position: absolute; font-size: 1.8rem; color: var(--javeriana-blue); z-index: 0; opacity: 0; transition: opacity 0.5s ease-in-out; }
+        .flow-label { position: absolute; font-family: 'Menlo', 'Monaco', 'Courier New', monospace; font-size: 0.85rem; color: var(--javeriana-blue); background-color: rgba(255, 255, 255, 0.85); padding: 3px 5px; border-radius: 3px; border: 1px solid #e0e7ff; z-index: 2; opacity: 0; transition: opacity 0.5s ease-in-out; white-space: nowrap; font-weight: 500; }
+
+        #arrow-birth-s { top: 50%; left: -2%; transform: translateY(-50%); font-size:1.5rem; } 
+        #label-birth-s { top: 30%; left: -1%; transform: translateX(0) translateY(-50%); } 
+        #arrow-s-i { top: 50%; left: 32.5%; transform: translateX(-50%) translateY(-50%); } 
+        #label-s-i { top: 25%; left: 32.5%; transform: translateX(-50%) translateY(-50%); }
+        #arrow-i-r { top: 50%; left: 67.5%; transform: translateX(-50%) translateY(-50%); } 
+        #label-i-r { top: 25%; left: 67.5%; transform: translateX(-50%) translateY(-50%); }
+        #arrow-death-s { bottom: -5px; left: 15%; transform: translateX(-50%) rotate(90deg); font-size:1.5rem; } 
+        #label-death-s { bottom: -25px; left: 15%; transform: translateX(-50%); }
+        #arrow-death-i { bottom: -5px; left: 50%; transform: translateX(-50%) rotate(90deg); font-size:1.5rem; } 
+        #label-death-i { bottom: -25px; left: 50%; transform: translateX(-50%); }
+        #arrow-death-r { bottom: -5px; left: 85%; transform: translateX(-50%) rotate(90deg); font-size:1.5rem; } 
+        #label-death-r { bottom: -25px; left: 85%; transform: translateX(-50%); }
+
+        .sir-controls button { background-color: var(--javeriana-blue); color: white; padding: 0.7rem 1.3rem; border-radius: 0.375rem; font-weight: 500; cursor: pointer; transition: background-color 0.2s; margin: 0.5rem 0.5rem; }
+        .sir-controls button:hover { background-color: #002269; }
+        .sir-controls button:disabled { background-color: #a5b4fc; cursor: not-allowed; }
+        .sir-explanation { margin-top: 1.5rem; padding: 1rem; background-color: #f3f4f6; border-radius: 0.375rem; width: 100%; text-align: left; font-size: 0.9rem; border-left: 4px solid var(--javeriana-yellow); }
+        .sir-explanation p { margin-bottom: 0.5rem; }
+        .sir-explanation h4 { font-size: 1.1rem; font-weight: 600; color: var(--javeriana-blue); margin-bottom: 0.75rem; }
 
         /* Parameter Accordion Styles */
         .parameter-button { background-color: #ffffff; border: 1px solid var(--border-color); border-radius: 0.5rem; padding: 1rem 1.5rem; width: 100%; text-align: left; font-size: 1.125rem; font-weight: 600; color: var(--javeriana-blue); margin-bottom: 1rem; cursor: pointer; transition: background-color 0.2s, border-color 0.2s; display: flex; justify-content: space-between; align-items: center; }
@@ -61,93 +112,94 @@
         .parameter-content .content-wrapper { display: flex; flex-direction: column; md:flex-row; gap: 1.5rem; align-items: flex-start; }
         .parameter-text { flex: 2; } 
         .parameter-graphic { flex: 1; display: flex; justify-content: center; align-items: center; padding-top: 1rem; min-width: 150px; }
-        .parameter-graphic svg { width: 100%; max-width: 150px; height: auto; }
+        .parameter-graphic img { width: 100%; max-width: 300px; height: auto; border-radius: 0.25rem;}
         .parameter-content h4 { font-size: 1.05rem; font-weight: 600; color: var(--text-dark); margin-bottom: 0.5rem; }
         .parameter-content p, .parameter-content li { font-size: 0.95rem; color: var(--text-medium); line-height: 1.6; margin-bottom: 0.5rem; }
-        .formula { font-family: 'Menlo', 'Monaco', 'Courier New', monospace; background-color: #f3f4f6; padding: 0.75rem; border-radius: 0.375rem; margin-top: 0.5rem; display: block; overflow-x: auto; font-size: 0.9rem; border: 1px solid #e5e7eb; }
+        .formula, .equation { font-family: 'Menlo', 'Monaco', 'Courier New', monospace; background-color: #f3f4f6; padding: 0.75rem; border-radius: 0.375rem; margin-top: 0.5rem; display: block; overflow-x: auto; font-size: 0.9rem; border: 1px solid #e5e7eb; }
 
-        /* Styles for static display in 'Other Models' section */
-        .model-display-wrapper {
-            display: flex;
-            flex-direction: column;
-            md:flex-row; /* For larger screens if needed */
-            gap: 1.5rem;
-            align-items: flex-start;
-        }
+        .model-display-wrapper { display: flex; flex-direction: column; md:flex-row; gap: 1.5rem; align-items: flex-start; }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1 class="main-title">Simulador de Modelado Epidemiológico</h1>
+            <div class="logo-container">
+                <img src="images/logoinstituto.png" alt="Logo Instituto de Salud Pública">
+                <img src="images/logojaveriana.png" alt="Logo Pontificia Universidad Javeriana">
+                <img src="images/Logo-ces.png" alt="Logo Universidad CES">
+            </div>
+            <h1 class="main-title">Modelado Matemático de Enfermedades Infecciosas</h1>
             <p class="institutional-credit">Una herramienta conceptual desarrollada para el Instituto de Salud Pública, Pontificia Universidad Javeriana</p>
-            <p class="subtitle">Juega con los parámetros y observa su impacto en tiempo real.</p>
+            <p class="subtitle">Descomposición Conceptual de Parámetros y Modelos</p>
         </header>
 
-        <section id="sir-gamified">
-            <h2 class="section-title">Laboratorio del Modelo SIR</h2>
-            <div class="sir-gamified-container">
-                <div class="simulation-area">
-                    <div class="compartment">
-                        <h3 class="compartment-title">Susceptibles (S)</h3>
-                        <div class="individuals-container" id="s-container"></div>
+        <section id="sir-model-dynamic" class="mt-6">
+            <h2 class="section-title">El Modelo SIR: Una Visión Dinámica con Dinámica Vital</h2>
+            <div class="sir-simulation-container">
+                <h3>Visualizando el Flujo Compartimental</h3>
+                <div class="sir-compartments">
+                    <div id="arrow-birth-s" class="flow-arrow">➔</div> <div id="label-birth-s" class="flow-label">Λ o B</div>
+                    
+                    <div class="compartment" id="s-compartment">
+                        <div class="compartment-title">Susceptibles (S)</div>
+                        <div class="individuals-container" id="s-individuals"></div>
                     </div>
-                    <div class="compartment">
-                        <h3 class="compartment-title">Infectados (I)</h3>
-                        <div class="individuals-container" id="i-container"></div>
+                    <div id="arrow-s-i" class="flow-arrow">➔</div> <div id="label-s-i" class="flow-label">βSI/N</div>
+                    <div class="compartment" id="i-compartment">
+                        <div class="compartment-title">Infectados (I)</div>
+                        <div class="individuals-container" id="i-individuals"></div>
                     </div>
-                    <div class="compartment">
-                        <h3 class="compartment-title">Recuperados (R)</h3>
-                        <div class="individuals-container" id="r-container"></div>
+                    <div id="arrow-i-r" class="flow-arrow">➔</div> <div id="label-i-r" class="flow-label">γI</div>
+                    <div class="compartment" id="r-compartment">
+                        <div class="compartment-title">Recuperados (R)</div>
+                        <div class="individuals-container" id="r-individuals"></div>
                     </div>
+
+                    <div id="arrow-death-s" class="flow-arrow">➔</div> <div id="label-death-s" class="flow-label">μS</div>
+                    <div id="arrow-death-i" class="flow-arrow">➔</div> <div id="label-death-i" class="flow-label">μI</div>
+                    <div id="arrow-death-r" class="flow-arrow">➔</div> <div id="label-death-r" class="flow-label">μR</div>
                 </div>
-                <div class="controls-area">
-                    <h3>Panel de Control de la Simulación</h3>
-                    <div class="mt-4">
-                        <label for="beta-slider">Tasa de Transmisión (β): <span id="beta-value" class="value-display">0.30</span></label>
-                        <input type="range" id="beta-slider" min="0.05" max="1.0" step="0.01" value="0.30">
-                    </div>
-                    <div class="mt-4">
-                        <label for="recovery-slider">Periodo de Recuperación (D): <span id="recovery-value" class="value-display">14</span> días</label>
-                        <input type="range" id="recovery-slider" min="2" max="30" step="1" value="14">
-                    </div>
-                    <div class="mt-4">
-                        <p class="text-sm">R₀ Calculado: <strong id="r0-display" class="value-display">4.2</strong></p>
-                    </div>
-                    <button id="start-reset-button" onclick="startResetSimulation()">Iniciar Simulación</button>
-                    <p class="text-xs text-gray-500 mt-2">Ajusta los deslizadores y presiona 'Iniciar'. La simulación se actualizará en tiempo real. Puedes reiniciar en cualquier momento.</p>
+                <div class="sir-controls">
+                    <button id="reset-sir" onclick="resetSimulation()">Reiniciar</button>
+                    <button id="next-step-sir" onclick="nextSirStep()">Siguiente Paso</button>
+                </div>
+                <div class="sir-explanation" id="sir-step-explanation">
+                    <p>Haz clic en "Siguiente Paso" para ver cómo se desarrolla la simulación, incluyendo nacimientos y muertes naturales.</p>
                 </div>
             </div>
-            <div class="content-card mt-8">
-                <h3>Curva Epidémica (S, I, R)</h3>
-                <canvas id="sir-chart"></canvas>
+            <div class="content-card">
+                 <h3>Ecuaciones del Modelo SIR con Dinámica Vital</h3>
+                <p>El flujo dinámico que observas, ahora incluyendo nacimientos y muertes naturales, se rige por:</p>
+                <code class="equation">dS/dt = Λ - (β × S × I) / N - μS</code>
+                <code class="equation">dI/dt = (β × S × I) / N - γI - μI</code>
+                <code class="equation">dR/dt = γI - μR</code>
+                <p>Donde: <span class="parameter-highlight">Λ (o B)</span> es la tasa de natalidad, y <span class="parameter-highlight">μ</span> es la tasa de mortalidad natural per cápita, aplicada a cada compartimento. N (S+I+R) ahora puede cambiar con el tiempo.</p>
             </div>
         </section>
 
         <section id="parameters">
             <h2 class="section-title">Parámetros Epidemiológicos Fundamentales</h2>
-            <!-- All parameter accordions, including the re-added ones -->
-            <button class="parameter-button" onclick="toggleParameter('betaContent')"><span>Tasa de Transmisión (β - beta)</span><span class="arrow">&#9654;</span></button>
-            <div id="betaContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>La tasa de transmisión, β, representa la tasa a la cual un individuo infeccioso genera nuevas infecciones.</p><h4>Relevancia:</h4><p>Un β alto indica que la enfermedad se propaga fácilmente. Intervenciones como el distanciamiento social o el uso de mascarillas buscan reducir β.</p><h4>Fórmula:</h4><code class="formula">β = k × p</code></div><div class="parameter-graphic"><svg viewBox="0 0 100 60"><g transform="translate(0, 5)"><path d="M15 45 C 20 35, 30 35, 35 45 C 40 55, 30 65, 25 60 C 20 55, 10 55, 15 45 Z" fill="#f87171"></path><circle cx="25" cy="25" r="8" fill="#f87171"></circle><path d="M40 30 L 60 30" stroke="#f87171" stroke-width="2" stroke-dasharray="4" marker-end="url(#svg-arrowhead)"></path><path d="M65 45 C 70 35, 80 35, 85 45 C 90 55, 80 65, 75 60 C 70 55, 60 55, 65 45 Z" fill="#60a5fa"></path><circle cx="75" cy="25" r="8" fill="#60a5fa"></circle></g></svg></div></div></div>
+            
+            <button class="parameter-button" onclick="toggleParameter('birthRateContent')"><span>Tasa de Natalidad y Mortalidad (Dinámica Vital)</span><span class="arrow">&#9654;</span></button>
+            <div id="birthRateContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>La **Tasa de Natalidad (Λ o B)** representa la tasa a la que nuevos individuos (susceptibles) se añaden a la población. La **Tasa de Mortalidad Natural (μ)** es la tasa per cápita a la que los individuos mueren por causas no relacionadas con la enfermedad.</p><h4>Relevancia:</h4><p>Para enfermedades endémicas a largo plazo, la reposición de susceptibles a través de nacimientos es crucial para la transmisión sostenida. Es importante destacar que en Colombia, la tasa de natalidad ha disminuido significativamente en los últimos años.</p></div><div class="parameter-graphic"><img src="images/EstadisticaVital.png" alt="Gráfico de Estadísticas Vitales"></div></div></div>
 
-            <button class="parameter-button" onclick="toggleParameter('gammaContent')"><span>Tasa de Recuperación (γ - gamma)</span><span class="arrow">&#9654;</span></button>
-            <div id="gammaContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>La tasa de recuperación, γ, es la tasa a la cual los individuos infecciosos dejan de serlo, ya sea porque se recuperan o son removidos.</p><h4>Relevancia:</h4><p>Un γ alto significa que los individuos se recuperan rápidamente, reduciendo el tiempo para transmitir la enfermedad.</p><h4>Fórmula:</h4><code class="formula">γ = 1 / D</code></div><div class="parameter-graphic"><svg viewBox="0 0 100 60"><g transform="translate(0, 5)"><path d="M15 45 C 20 35, 30 35, 35 45 C 40 55, 30 65, 25 60 C 20 55, 10 55, 15 45 Z" fill="#f87171"></path><circle cx="25" cy="25" r="8" fill="#f87171"></circle><path d="M40 30 L 60 30" stroke="#34d399" stroke-width="2" marker-end="url(#svg-arrowhead)"></path><path d="M65 45 C 70 35, 80 35, 85 45 C 90 55, 80 65, 75 60 C 70 55, 60 55, 65 45 Z" fill="#34d399"></path><circle cx="75" cy="25" r="8" fill="#34d399"></circle></g></svg></div></div></div>
+            <button class="parameter-button" onclick="toggleParameter('betaContent')"><span>Tasa de Transmisión (β - beta)</span><span class="arrow">&#9654;</span></button>
+            <div id="betaContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>La tasa a la cual un individuo infeccioso genera nuevas infecciones.</p><h4>Relevancia:</h4><p>Un β alto indica que la enfermedad se propaga fácilmente. Un ejemplo claro es el **COVID-19**: la variante original tenía un R₀ de ~2.5, la variante Delta de ~7, y Ómicron de ~10, en gran parte debido a un aumento en la tasa de transmisión β de cada variante.</p><h4>Fórmula:</h4><code class="formula">β = k × p</code></div><div class="parameter-graphic"><img src="images/Beta CovidVariantes.png" alt="Ejemplo de R₀ para variantes de COVID"></div></div></div>
 
             <button class="parameter-button" onclick="toggleParameter('r0Content')"><span>Número Básico de Reproducción (R₀)</span><span class="arrow">&#9654;</span></button>
-            <div id="r0Content" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>El R₀ es el número promedio de infecciones secundarias causadas por un único individuo infeccioso en una población completamente susceptible.</p><h4>Relevancia:</h4><p>Es el umbral crítico de una epidemia. Si R₀ > 1, la enfermedad se propaga. El objetivo de las intervenciones es reducir la transmisión hasta que el número reproductivo efectivo sea menor que 1.</p><h4>Fórmula:</h4><code class="formula">R₀ = β / γ</code></div><div class="parameter-graphic"><svg viewBox="0 0 100 80"><g transform="translate(0 10)"><path d="M40 45 C 45 35, 55 35, 60 45 C 65 55, 55 65, 50 60 C 45 55, 35 55, 40 45 Z" fill="#f87171"></path><circle cx="50" cy="25" r="8" fill="#f87171"></circle><path d="M50 20 L 25 10" stroke="#f87171" stroke-width="2" stroke-dasharray="3" marker-end="url(#svg-arrowhead)"></path><path d="M50 20 L 75 10" stroke="#f87171" stroke-width="2" stroke-dasharray="3" marker-end="url(#svg-arrowhead)"></path><g opacity="0.8"><path d="M15 15 C 20 5, 30 5, 35 15 C 40 25, 30 35, 25 30 C 20 25, 10 25, 15 15 Z" fill="#60a5fa" transform="scale(0.8) translate(10, -5)"></path><circle cx="25" cy="5" r="5" fill="#60a5fa" transform="scale(0.8) translate(10, -5)"></circle></g><g opacity="0.8"><path d="M65 15 C 70 5, 80 5, 85 15 C 90 25, 80 35, 75 30 C 70 25, 60 25, 65 15 Z" fill="#60a5fa" transform="scale(0.8) translate(-10, -5)"></path><circle cx="75" cy="5" r="5" fill="#60a5fa" transform="scale(0.8) translate(-10, -5)"></circle></g></g></svg></div></div></div>
+            <div id="r0Content" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>El número promedio de infecciones secundarias causadas por un único individuo infeccioso en una población completamente susceptible.</p><h4>Relevancia:</h4><p>Es el umbral crítico. Si R₀ > 1, la epidemia crece. Por ejemplo, el **Ébola** con un R₀ de 2 es muy grave pero menos transmisible que el **COVID-19** (variante Delta*) con un R₀ de 4, que a su vez es menos transmisible que el sarampión. (*Ejemplo didáctico).</p><h4>Fórmula:</h4><code class="formula">R₀ = β / γ</code></div><div class="parameter-graphic"><img src="images/Ro-ejemplo.png" alt="Ejemplo de R₀ para Ébola y COVID-19"></div></div></div>
 
-            <button class="parameter-button" onclick="toggleParameter('incubContent')"><span>Periodo de Incubación</span><span class="arrow">&#9654;</span></button>
-            <div id="incubContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>Es el tiempo que transcurre desde la infección hasta la aparición de los primeros síntomas.</p><h4>Relevancia:</h4><p>Crucial para establecer la duración de las cuarentenas y para el rastreo de contactos. Justifica el compartimento 'Expuesto' (E) en los modelos SEIR.</p><h4>Fórmula:</h4><code class="formula">Tasa de progresión (σ) = 1 / T<sub>inc</sub></code></div><div class="parameter-graphic"><svg viewBox="0 0 100 70"><path d="M20 45 C 25 35, 35 35, 40 45 C 45 55, 35 65, 30 60 C 25 55, 15 55, 20 45 Z" fill="#60a5fa"></path><circle cx="30" cy="25" r="8" fill="#60a5fa"></circle><path d="M45 35 L 75 35" stroke="#a0aec0" stroke-width="2" marker-end="url(#svg-arrowhead)"></path><path stroke="#a0aec0" stroke-width="1.5" d="M58 20 A 10 10 0 1 1 62 20"></path><circle cx="60" cy="30" r="1.5" fill="#a0aec0"></circle><path d="M60 30 L 60 22" stroke="#a0aec0" stroke-width="1"></path><path d="M60 30 L 65 30" stroke="#a0aec0" stroke-width="1"></path><text x="47" y="50" font-size="8">T<sub>inc</sub></text><g transform="translate(75 20) scale(0.4)"><path fill="#f87171" d="M59.6,29.4l-3.3-3.3c-0.4-0.4-1-0.4-1.4,0s-0.4,1,0,1.4l3.3,3.3c0.4,0.4,1,0.4,1.4,0S60,29.8,59.6,29.4z M40.4,29.4c-0.4-0.4-1-0.4-1.4,0s-0.4,1,0,1.4l3.3,3.3c0.4,0.4,1,0.4,1.4,0s0.4-1,0-1.4L40.4,29.4z M49,15c-1.1,0-2,0.9-2,2v5c0,1.1,0.9,2,2,2s2-0.9,2-2v-5C51,15.9,50.1,15,49,15z M29,22c0,1.1,0.9,2,2,2h5c1.1,0,2-0.9,2-2s-0.9-2-2-2h-5C29.9,20,29,20.9,29,22z M69,22c0-1.1-0.9-2-2-2h-5c-1.1,0-2,0.9-2,2s0.9,2,2,2h5C68.1,24,69,23.1,69,22z"></path></g></svg></div></div></div>
+            <button class="parameter-button" onclick="toggleParameter('incubContent')"><span>Periodo de Incubación y Latente</span><span class="arrow">&#9654;</span></button>
+            <div id="incubContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>El **Periodo de Incubación** es el tiempo desde la infección hasta la aparición de los síntomas. El **Periodo Latente** es el tiempo hasta que la persona se vuelve infecciosa.</p><h4>Relevancia:</h4><p>Varía mucho: **Ébola** (2-21 días), **COVID-19** (hasta 14 días), **Sarampión** (10-14 días). Es crucial para definir cuarentenas. Si el periodo latente es más corto que el de incubación, ocurre transmisión presintomática.</p></div><div class="parameter-graphic"><img src="images/DinamicaCOVID.png" alt="Ejemplo de Dinámica de COVID-19"></div></div></div>
 
-            <button class="parameter-button" onclick="toggleParameter('genTimeContent')"><span>Tiempo de Generación (T<sub>g</sub>)</span><span class="arrow">&#9654;</span></button>
-            <div id="genTimeContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>El tiempo promedio entre la infección de un caso primario y la infección de los casos secundarios que este genera.</p><h4>Relevancia:</h4><p>Refleja la velocidad del ciclo de transmisión. Un tiempo de generación más corto implica un crecimiento epidémico más rápido. Es un concepto teórico clave pero difícil de observar directamente.</p></div><div class="parameter-graphic"><svg viewBox="0 0 100 80"><g transform="translate(0 10)"><path d="M40 45 C 45 35, 55 35, 60 45 C 65 55, 55 65, 50 60 C 45 55, 35 55, 40 45 Z" fill="#f87171"></path><circle cx="50" cy="25" r="8" fill="#f87171"></circle><path d="M50 30 L 25 15" stroke="#f87171" stroke-width="2" stroke-dasharray="3"></path><path d="M50 30 L 75 15" stroke="#f87171" stroke-width="2" stroke-dasharray="3"></path><path fill="#a0aec0" d="M10 20 L 20 10 L 30 20 L 20 30 z" transform="translate(15 -5) rotate(45)"></path><path fill="#a0aec0" d="M10 20 L 20 10 L 30 20 L 20 30 z" transform="translate(65 -5) rotate(45)"></path><text x="45" y="10" font-size="8">T<sub>g</sub></text></g></svg></div></div></div>
+            <button class="parameter-button" onclick="toggleParameter('genTimeContent')"><span>Tiempo de Generación e Intervalo Serial</span><span class="arrow">&#9654;</span></button>
+            <div id="genTimeContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>El **Tiempo de Generación** es el tiempo entre la infección de un caso y sus casos secundarios. El **Intervalo Serial** es el tiempo entre los *síntomas* de un caso y sus casos secundarios.</p><h4>Relevancia:</h4><p>El intervalo serial es la medida observable que aproxima el tiempo de generación. Para la **gripe**, ambos son muy cortos (2-3 días), lo que explica su rápida propagación.</p></div><div class="parameter-graphic"><img src="images/IntervaloSerial.jpg" alt="Diagrama de Intervalo Serial y Tiempo de Generación"></div></div></div>
+            
+            <button class="parameter-button" onclick="toggleParameter('attackRateContent')"><span>Tasa de Ataque</span><span class="arrow">&#9654;</span></button>
+            <div id="attackRateContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>La proporción de una población en riesgo que contrae la enfermedad durante un brote específico.</p><h4>Relevancia:</h4><p>Mide la infectividad en un grupo definido. En un brote de **norovirus** en un crucero, puede ser del 40%. Para el **sarampión** en una escuela de no vacunados, puede superar el 90%.</p><h4>Fórmula:</h4><code class="formula">Tasa de Ataque = (Nuevos Casos) / (Población en Riesgo al Inicio)</code></div><div class="parameter-graphic"><img src="images/AttackRatio.png" alt="Ejemplo de Tasa de Ataque"></div></div></div>
 
-            <button class="parameter-button" onclick="toggleParameter('serialIntContent')"><span>Intervalo Serial</span><span class="arrow">&#9654;</span></button>
-            <div id="serialIntContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>El tiempo entre el inicio de los síntomas en un caso primario y el inicio de los síntomas en un caso secundario.</p><h4>Relevancia:</h4><p>Es un proxy observable del tiempo de generación, ya que los síntomas son más fáciles de fechar que la infección. Se usa para estimar la rapidez de la propagación.</p></div><div class="parameter-graphic"><svg viewBox="0 0 100 80"><g transform="translate(0, 10)"><g transform="translate(-10,0)"><g transform="scale(0.4) translate(30 20)"><path fill="#f87171" d="M59.6,29.4l-3.3-3.3c-0.4-0.4-1-0.4-1.4,0s-0.4,1,0,1.4l3.3,3.3c0.4,0.4,1,0.4,1.4,0S60,29.8,59.6,29.4z M40.4,29.4c-0.4-0.4-1-0.4-1.4,0s-0.4,1,0,1.4l3.3,3.3c0.4,0.4,1,0.4,1.4,0s0.4-1,0-1.4L40.4,29.4z M49,15c-1.1,0-2,0.9-2,2v5c0,1.1,0.9,2,2,2s2-0.9,2-2v-5C51,15.9,50.1,15,49,15z M29,22c0,1.1,0.9,2,2,2h5c1.1,0,2-0.9,2-2s-0.9-2-2-2h-5C29.9,20,29,20.9,29,22z M69,22c0-1.1-0.9-2-2-2h-5c-1.1,0-2,0.9-2,2s0.9,2,2,2h5C68.1,24,69,23.1,69,22z"></path></g></g><path d="M40 30 L 60 30" stroke="#a0aec0" stroke-width="2" marker-end="url(#svg-arrowhead)"></path><text x="42" y="25" font-size="8">Intervalo</text><g transform="translate(50,0)"><g transform="scale(0.4) translate(30 20)"><path fill="#f87171" d="M59.6,29.4l-3.3-3.3c-0.4-0.4-1-0.4-1.4,0s-0.4,1,0,1.4l3.3,3.3c0.4,0.4,1,0.4,1.4,0S60,29.8,59.6,29.4z M40.4,29.4c-0.4-0.4-1-0.4-1.4,0s-0.4,1,0,1.4l3.3,3.3c0.4,0.4,1,0.4,1.4,0s0.4-1,0-1.4L40.4,29.4z M49,15c-1.1,0-2,0.9-2,2v5c0,1.1,0.9,2,2,2s2-0.9,2-2v-5C51,15.9,50.1,15,49,15z M29,22c0,1.1,0.9,2,2,2h5c1.1,0,2-0.9,2-2s-0.9-2-2-2h-5C29.9,20,29,20.9,29,22z M69,22c0-1.1-0.9-2-2-2h-5c-1.1,0-2,0.9-2,2s0.9,2,2,2h5C68.1,24,69,23.1,69,22z"></path></g></g></g></svg></div></div></div>
-
-            <button class="parameter-button" onclick="toggleParameter('cfrContent')"><span>Tasa de Letalidad (CFR)</span><span class="arrow">&#9654;</span></button>
-            <div id="cfrContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>La Tasa de Letalidad (CFR) es la proporción de individuos diagnosticados con una enfermedad que mueren a causa de ella.</p><h4>Relevancia:</h4><p>Es un indicador clave de la severidad de una enfermedad. Es crucial para la planificación de recursos sanitarios y para la comunicación de riesgos al público.</p><h4>Fórmula:</h4><code class="formula">CFR = (Muertes) / (Casos Confirmados)</code></div><div class="parameter-graphic"><svg viewBox="0 0 100 80"><g transform="translate(10,10)"><circle cx="15" cy="15" r="5" fill="#f87171"></circle><circle cx="35" cy="15" r="5" fill="#f87171"></circle><circle cx="55" cy="15" r="5" fill="#f87171"></circle><circle cx="75" cy="15" r="5" fill="#f87171"></circle><circle cx="15" cy="35" r="5" fill="#f87171"></circle><circle cx="35" cy="35" r="5" fill="#f87171"></circle><path d="M50 30 L 60 40 M 60 30 L 50 40" stroke="#2d3748" stroke-width="2"></path><circle cx="75" cy="35" r="5" fill="#f87171"></circle></g></svg></div></div></div>
-
+            <button class="parameter-button" onclick="toggleParameter('cfrContent')"><span>Tasa de Letalidad (CFR) y Tasa de Mortalidad por Infección (IFR)</span><span class="arrow">&#9654;</span></button>
+            <div id="cfrContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>El **CFR** es la proporción de muertes entre los casos *confirmados*. El **IFR** es la proporción de muertes entre *todas* las infecciones (incluidas las no diagnosticadas).</p><h4>Relevancia:</h4><p>El IFR es una medida más precisa de la severidad real. Para el **COVID-19**, el CFR inicial era alto, pero el IFR era menor debido a la gran cantidad de casos asintomáticos.</p><h4>Fórmula:</h4><code class="formula">IFR = (Muertes) / (Total de Infecciones)</code></div><div class="parameter-graphic"><img src="images/CFR.png" alt="Ejemplo de Tasa de Letalidad"></div></div></div>
         </section>
         
         <section id="vector-borne-models" class="mt-6">
@@ -161,31 +213,16 @@
                     </div>
                     <div class="flex-1 flex justify-center items-center">
                         <svg class="w-56 h-56 text-gray-700" viewBox="0 0 100 100">
-                            <!-- Mosquito -->
-                            <g transform="translate(20 20) scale(0.5)">
-                                <path d="M21.9 16.9C21.1 16.1 20.1 16 19 16h-1a3 3 0 00-3-3V9a1 1 0 00-1-1h-2a1 1 0 00-1 1v4a1 1 0 001 1h2a1 1 0 011 1v1a1 1 0 01-1 1h-2a3 3 0 01-3-3V9a1 1 0 01-1-1H6a1 1 0 01-1-1V4a1 1 0 011-1h4a1 1 0 011 1v1" stroke="var(--text-dark)" stroke-width="3"></path><path d="M12 21v-3 M18 21v-3 M6 21v-3 M3 12h1 M19 3l-2 2 M2 20l2-2" stroke="var(--text-dark)" stroke-width="3"></path>
-                            </g>
-                            <!-- Arrow -->
+                            <g transform="translate(20 20) scale(0.5)"><path d="M21.9 16.9C21.1 16.1 20.1 16 19 16h-1a3 3 0 00-3-3V9a1 1 0 00-1-1h-2a1 1 0 00-1 1v4a1 1 0 001 1h2a1 1 0 011 1v1a1 1 0 01-1 1h-2a3 3 0 01-3-3V9a1 1 0 01-1-1H6a1 1 0 01-1-1V4a1 1 0 011-1h4a1 1 0 011 1v1" stroke="var(--text-dark)" stroke-width="3"></path><path d="M12 21v-3 M18 21v-3 M6 21v-3 M3 12h1 M19 3l-2 2 M2 20l2-2" stroke="var(--text-dark)" stroke-width="3"></path></g>
                              <path d="M45 40 L 60 55" stroke="var(--infected-color)" stroke-width="2" stroke-dasharray="3" marker-end="url(#svg-arrowhead)"></path>
                              <text x="50" y="45" font-size="8" fill="var(--infected-color)">PIE</text>
-                            <!-- Person -->
-                            <g transform="translate(60 60) scale(1.5)">
-                               <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" fill="var(--susceptible-color)"></path>
-                            </g>
+                            <g transform="translate(60 60) scale(1.5)"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" fill="var(--susceptible-color)"></path></g>
                         </svg>
                     </div>
                 </div>
             </div>
-            <!-- Collapsible parameters for vectors -->
             <button class="parameter-button" onclick="toggleParameter('eipContent')"><span>Periodo de Incubación Extrínseco (PIE)</span><span class="arrow">&#9654;</span></button>
-            <div id="eipContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>Tiempo que tarda el patógeno en replicarse dentro del vector (ej. mosquito) hasta que este puede transmitirlo. Es altamente sensible a la temperatura.</p></div><div class="parameter-graphic"><svg viewBox="0 0 100 80"><g transform="scale(0.5) translate(40,20)"><path d="M21.9 16.9C21.1 16.1 20.1 16 19 16h-1a3 3 0 00-3-3V9a1 1 0 00-1-1h-2a1 1 0 00-1 1v4a1 1 0 001 1h2a1 1 0 011 1v1a1 1 0 01-1 1h-2a3 3 0 01-3-3V9a1 1 0 01-1-1H6a1 1 0 01-1-1V4a1 1 0 011-1h4a1 1 0 011 1v1" stroke-width="3" stroke="#4A5568" fill="none"></path><path d="M12 21v-3 M18 21v-3 M6 21v-3" stroke-width="3" stroke="#4A5568" fill="none"></path></g><path stroke="#a0aec0" stroke-width="1.5" d="M48 50 A 10 10 0 1 1 52 50"></path><circle cx="50" cy="60" r="1.5" fill="#a0aec0"></circle><path d="M50 60 L 50 52" stroke="#a0aec0" stroke-width="1"></path><path d="M50 60 L 55 60" stroke="#a0aec0" stroke-width="1"></path></svg></div></div></div>
-            
-            <button class="parameter-button" onclick="toggleParameter('attackRateContent')"><span>Tasa de Ataque</span><span class="arrow">&#9654;</span></button>
-            <div id="attackRateContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>La proporción de una población en riesgo que contrae la enfermedad durante un brote específico.</p><h4>Relevancia:</h4><p>Es una medida de la morbilidad en un grupo definido durante un periodo limitado. A menudo se calcula para grupos específicos (ej. asistentes a un evento, miembros de un hogar).</p><h4>Fórmula:</h4><code class="formula">Tasa de Ataque = (Nuevos Casos) / (Población en Riesgo al Inicio)</code></div><div class="parameter-graphic"><svg viewBox="0 0 100 80"><rect x="10" y="10" width="80" height="60" rx="5" fill="none" stroke="#a0aec0" stroke-dasharray="4"></rect><circle cx="30" cy="30" r="5" fill="#f87171"></circle><circle cx="50" cy="50" r="5" fill="#60a5fa"></circle><circle cx="70" cy="25" r="5" fill="#60a5fa"></circle><circle cx="25" cy="55" r="5" fill="#60a5fa"></circle><circle cx="75" cy="60" r="5" fill="#60a5fa"></circle></svg></div></div></div>
-
-            <button class="parameter-button" onclick="toggleParameter('ifrContent')"><span>Tasa de Mortalidad por Infección (IFR)</span><span class="arrow">&#9654;</span></button>
-            <div id="ifrContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>Proporción de muertes entre el número total de individuos infectados (incluyendo casos sintomáticos, asintomáticos y no diagnosticados).</p><h4>Relevancia:</h4><p>Se considera una medida más precisa de la verdadera severidad de una enfermedad que el CFR, pero es más difícil de calcular porque requiere estimar el número total de infecciones.</p><h4>Fórmula:</h4><code class="formula">IFR = (Muertes) / (Total de Infecciones)</code></div><div class="parameter-graphic"><svg viewBox="0 0 100 80"><circle cx="20" cy="20" r="8" fill="#cbd5e1"></circle><circle cx="40" cy="20" r="8" fill="#f87171"></circle><circle cx="60" cy="20" r="8" fill="#f87171"></circle><circle cx="80" cy="20" r="8" fill="#cbd5e1"></circle><circle cx="30" cy="45" r="8" fill="#f87171"></circle><path d="M45 40 L 55 50 M 55 40 L 45 50" stroke="#2d3748" stroke-width="2.5"></path><circle cx="70" cy="45" r="8" fill="#f87171"></circle></svg></div></div></div>
-
+            <div id="eipContent" class="parameter-content"><div class="content-wrapper"><div class="parameter-text"><h4>Definición:</h4><p>Tiempo que tarda el patógeno en replicarse dentro del vector (ej. mosquito) hasta que este puede transmitirlo. Es altamente sensible a la temperatura.</p></div><div class="parameter-graphic"><img src="images/EIP.png" alt="Ejemplo de Periodo de Incubación Extrínseco"></div></div></div>
         </section>
 
         <section id="other-models" class="mt-6">
@@ -199,7 +236,17 @@
             </div>
         </section>
         
-        <!-- References Section -->
+        <section id="references" class="mt-6">
+            <h2 class="section-title">Referencias</h2>
+            <div class="content-card">
+                <p>Esta presentación se basa en conceptos fundamentales del modelado epidemiológico. Para lecturas adicionales, considere estos tipos de recursos:</p>
+                <ul class="list-disc list-inside space-y-2 text-sm">
+                    <li>Pardo-Linares, J., & Usma-Gómez, L. F. (2014). Un modelo SIR para la epidemia de dengue en una ciudad de Colombia. *Revista de Salud Pública*, 16(2), 292-304. Disponible en: <a href="http://www.scielo.org.co/scielo.php?script=sci_arttext&pid=S0124-71072014000200009" target="_blank" class="text-blue-600 hover:underline">http://www.scielo.org.co/scielo.php?script=sci_arttext&pid=S0124-71072014000200009</a></li>
+                    <li>Rojas-Alvarez, D. P., & Rodríguez-Morales, A. J. (2020). COVID-19 en Colombia: ¿Qué podemos esperar de la dinámica de la epidemia? *Revista de Salud Pública*, 22(2), 1-9. Disponible en: <a href="https://www.scielosp.org/article/rsap/2020.v22n2/123-131/" target="_blank" class="text-blue-600 hover:underline">https://www.scielosp.org/article/rsap/2020.v22n2/123-131/</a></li>
+                    <li>Anderson RM, May RM. (1992). *Infectious diseases of humans: dynamics and control*. Oxford university press.</li>
+                </ul>
+            </div>
+        </section>
     </div>
 
     <svg height="0" width="0"><defs><marker id="svg-arrowhead" markerWidth="5" markerHeight="4" refX="0" refY="2" orient="auto"><polygon points="0 0, 5 2, 0 4" fill="var(--javeriana-blue)" /></marker></defs></svg>
@@ -207,166 +254,173 @@
     <script>
         function toggleParameter(contentId) {
             const content = document.getElementById(contentId);
-            const button = content.previousElementSibling; 
+            const button = content.previousElementSibling;
+            
             document.querySelectorAll('.parameter-content').forEach(item => {
                 if (item.id !== contentId && item.classList.contains('show')) {
                     item.classList.remove('show');
-                    item.previousElementSibling.classList.remove('active');
+                    if (item.previousElementSibling) {
+                        item.previousElementSibling.classList.remove('active');
+                    }
                 }
             });
+
             content.classList.toggle('show');
             button.classList.toggle('active');
         }
 
-        const sContainer = document.getElementById('s-container');
-        const iContainer = document.getElementById('i-container');
-        const rContainer = document.getElementById('r-container');
-        const betaSlider = document.getElementById('beta-slider');
-        const betaValue = document.getElementById('beta-value');
-        const recoverySlider = document.getElementById('recovery-slider');
-        const recoveryValue = document.getElementById('recovery-value');
-        const r0Display = document.getElementById('r0-display');
-        const startResetButton = document.getElementById('start-reset-button');
+       // --- Step-by-Step SIR Simulation Logic ---
+        const sContainer = document.getElementById('s-individuals');
+        const iContainer = document.getElementById('i-individuals');
+        const rContainer = document.getElementById('r-individuals');
+        const explanationDiv = document.getElementById('sir-step-explanation');
+        const nextButton = document.getElementById('next-step-sir');
 
-        let simulationId;
-        let chart;
-        const totalPopulation = 100;
-        let individuals = [];
-        let timeStep = 0;
+        const arrowBirthS = document.getElementById('arrow-birth-s');
+        const labelBirthS = document.getElementById('label-birth-s');
+        const arrowSToI = document.getElementById('arrow-s-i');
+        const labelSToI = document.getElementById('label-s-i');
+        const arrowIToR = document.getElementById('arrow-i-r');
+        const labelIToR = document.getElementById('label-i-r');
+        const arrowDeathS = document.getElementById('arrow-death-s');
+        const labelDeathS = document.getElementById('label-death-s');
+        const arrowDeathI = document.getElementById('arrow-death-i');
+        const labelDeathI = document.getElementById('label-death-i');
+        const arrowDeathR = document.getElementById('arrow-death-r');
+        const labelDeathR = document.getElementById('label-death-r');
+
+        let currentStep = 0;
+        const totalInitialSusceptible = 15; 
+        const initialInfected = 2;
         
         const personIconSVG = `<svg class="individual-icon" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" /></svg>`;
 
-        function createIndividual(id, status) {
-            const el = document.createElement('div');
-            el.innerHTML = personIconSVG;
-            el.querySelector('svg').classList.add(status);
-            return { id, status, element: el };
+        function createIndividualElement(status) {
+            const div = document.createElement('div');
+            div.innerHTML = personIconSVG;
+            div.querySelector('svg').classList.add(status);
+            return div;
         }
 
-        function updateParameters() {
-            const beta = parseFloat(betaSlider.value);
-            const D = parseInt(recoverySlider.value);
-            const gamma = D > 0 ? 1 / D : 0;
-            const R0 = gamma > 0 ? beta / gamma : Infinity;
-            betaValue.textContent = beta.toFixed(2);
-            recoveryValue.textContent = `${D} días`;
-            r0Display.textContent = R0.toFixed(2);
-        }
-
-        function setupSimulation() {
-            individuals = [];
+        function initializeIndividuals() {
             sContainer.innerHTML = '';
             iContainer.innerHTML = '';
             rContainer.innerHTML = '';
-            for (let i = 0; i < totalPopulation - 2; i++) {
-                const ind = createIndividual(i, 'susceptible');
-                individuals.push(ind);
-                sContainer.appendChild(ind.element);
-            }
-            for (let i = totalPopulation - 2; i < totalPopulation; i++) {
-                const ind = createIndividual(i, 'infected');
-                individuals.push(ind);
-                iContainer.appendChild(ind.element);
-            }
+            for (let i = 0; i < totalInitialSusceptible; i++) { sContainer.appendChild(createIndividualElement('susceptible')); }
+            for (let i = 0; i < initialInfected; i++) { iContainer.appendChild(createIndividualElement('infected')); }
+        }
+        
+        function hideAllFlows() {
+            [arrowBirthS, labelBirthS, arrowSToI, labelSToI, arrowIToR, labelIToR, arrowDeathS, labelDeathS, arrowDeathI, labelDeathI, arrowDeathR, labelDeathR].forEach(el => {
+                if(el) el.style.opacity = 0; 
+            });
         }
 
-        function startResetSimulation() {
-            if (simulationId) {
-                clearInterval(simulationId);
-            }
-            if (chart) {
-                chart.destroy();
-            }
-            
-            timeStep = 0;
-            setupSimulation();
-            setupChart();
-
-            simulationId = setInterval(() => {
-                const beta = parseFloat(betaSlider.value);
-                const D = parseInt(recoverySlider.value);
-                const gamma = D > 0 ? 1 / D : 0;
-                runStep(beta, gamma);
-            }, 200);
-            startResetButton.textContent = 'Reiniciar Simulación';
+        function resetSimulation() {
+            currentStep = 0;
+            initializeIndividuals();
+            hideAllFlows();
+            if(explanationDiv) explanationDiv.innerHTML = '<p>Haz clic en "Siguiente Paso" para ver cómo se desarrolla la simulación, incluyendo nacimientos y muertes naturales.</p>';
+            if(nextButton) nextButton.disabled = false;
         }
 
-        function runStep(beta, gamma) {
-            const sCount = individuals.filter(p => p.status === 'S').length;
-            const iCount = individuals.filter(p => p.status === 'I').length;
-            const rCount = individuals.filter(p => p.status === 'R').length;
-            const N = individuals.length;
+        function nextSirStep() {
+            currentStep++;
+            let explanationHTML = '';
+            hideAllFlows(); 
 
-            if (iCount === 0 && simulationId) {
-                clearInterval(simulationId);
-                simulationId = null;
-                startResetButton.textContent = 'Iniciar Simulación';
-                return;
-            }
-
-            const statusChanges = [];
-            individuals.forEach(p => {
-                if (p.status === 'S') {
-                    if (Math.random() < beta * (iCount / N)) {
-                        statusChanges.push({ individual: p, newStatus: 'infected' });
+            switch (currentStep) {
+                case 1: 
+                    explanationHTML = `<h4>Paso 1: Base Poblacional y Dinámica Vital</h4>
+                        <p>Comenzamos con una población. Incluso sin la enfermedad específica, las poblaciones experimentan <span class="parameter-highlight">Nacimientos (Λ o B)</span>, que se suman a los Susceptibles, y <span class="parameter-highlight">Muertes Naturales (μ)</span>, que eliminan individuos de todos los compartimentos (S, I, R).</p>
+                        <code class="equation">Entrada a S: Λ (Nacimientos)</code><code class="equation">Salida de cada compartimento X: μX</code>
+                        <p>Visualizando estos procesos de fondo constantes:</p>`;
+                    if(arrowBirthS) arrowBirthS.style.opacity = 1; 
+                    if(labelBirthS) { labelBirthS.style.opacity = 1; labelBirthS.textContent = "Λ"; }
+                    if(arrowDeathS) arrowDeathS.style.opacity = 1; 
+                    if(labelDeathS) { labelDeathS.style.opacity = 1; labelDeathS.textContent = "μS"; }
+                    if(arrowDeathI) arrowDeathI.style.opacity = 1; 
+                    if(labelDeathI) { labelDeathI.style.opacity = 1; labelDeathI.textContent = "μI"; }
+                    if(arrowDeathR) arrowDeathR.style.opacity = 1; 
+                    if(labelDeathR) { labelDeathR.style.opacity = 1; labelDeathR.textContent = "μR"; }
+                    
+                    if (sContainer.children.length < 20) { 
+                        sContainer.appendChild(createIndividualElement('susceptible'));
                     }
-                } else if (p.status === 'I') {
-                    if (Math.random() < gamma) {
-                        statusChanges.push({ individual: p, newStatus: 'recovered' });
+                    break;
+
+                case 2: 
+                    explanationHTML = `<h4>Paso 2: Introducción de la Infección (S → I)</h4>
+                        <p>Ahora, una enfermedad infecciosa está presente. Los individuos Susceptibles (azules) se Infectan (rojos) por contacto efectivo con una persona infecciosa.</p>
+                        <p>La tasa de este flujo S → I es impulsada por la <span class="parameter-highlight">Fuerza de Infección (λ)</span>.</p>
+                        <code class="formula">λ = (β × I) / N</code><code class="equation">Flujo S → I : λS</code>
+                        <p>Parámetro clave: <span class="parameter-highlight">β (Tasa de Transmisión)</span>.</p>`;
+                    if(arrowSToI) arrowSToI.style.opacity = 1; 
+                    if(labelSToI) { labelSToI.style.opacity = 1; labelSToI.textContent = "βSI/N"; }
+                    if(arrowDeathS) arrowDeathS.style.opacity = 1; 
+                    if(labelDeathS) { labelDeathS.style.opacity = 1; labelDeathS.textContent = "μS"; } 
+                    if(arrowBirthS) arrowBirthS.style.opacity = 1; 
+                    if(labelBirthS) { labelBirthS.style.opacity = 1; labelBirthS.textContent = "Λ"; } 
+
+                    let infectionsThisStep = Math.min(sContainer.children.length, 2); 
+                    if (sContainer.children.length > 0 && iContainer.children.length > 0 && infectionsThisStep > 0) {
+                        for(let k=0; k < infectionsThisStep; k++) {
+                            if (sContainer.children[0]) { iContainer.appendChild(sContainer.children[0]); }
+                        }
                     }
-                }
-            });
+                    break;
 
-            statusChanges.forEach(change => {
-                change.individual.status = change.newStatus;
-                change.individual.element.querySelector('svg').className = `individual-icon ${change.newStatus}`;
-                if (change.newStatus === 'infected') iContainer.appendChild(change.individual.element);
-                if (change.newStatus === 'recovered') rContainer.appendChild(change.individual.element);
-            });
+                case 3: 
+                    explanationHTML = `<h4>Paso 3: Destino de los Infectados (I → R)</h4>
+                        <p>Los individuos Infectados (rojos) no permanecen infectados para siempre. Se <span class="parameter-highlight">Recuperan (R)</span> (volviéndose verdes) a una cierta tasa.</p>
+                        <p>El flujo I → R se rige por la <span class="parameter-highlight">Tasa de Recuperación (γ)</span>.</p>
+                        <code class="formula">γ = 1 / D (Duración de la Infecciosidad)</code><code class="equation">Flujo I → R : γI</code>`;
+                    if(arrowIToR) arrowIToR.style.opacity = 1; 
+                    if(labelIToR) { labelIToR.style.opacity = 1; labelIToR.textContent = "γI"; }
+                    if(arrowDeathI) arrowDeathI.style.opacity = 1; 
+                    if(labelDeathI) { labelDeathI.style.opacity = 1; labelDeathI.textContent = "μI"; }
+                    if(arrowSToI) arrowSToI.style.opacity = 1; 
+                    if(labelSToI) { labelSToI.style.opacity = 1; labelSToI.textContent = "βSI/N"; }
 
-            updateChart(sCount, iCount, rCount);
+                    let recoveriesThisStep = Math.min(iContainer.children.length, 1); 
+                     if (iContainer.children.length > 0 && recoveriesThisStep > 0) {
+                        for(let k=0; k < recoveriesThisStep; k++) {
+                            if (iContainer.children[0]) { rContainer.appendChild(iContainer.children[0]); }
+                        }
+                    }
+                    break;
+                
+                case 4: 
+                     explanationHTML = `<h4>Paso 4: Dinámica Completa y Ecuaciones</h4>
+                        <p>Todos estos procesos ocurren simultáneamente. Las ecuaciones completas del modelo SIR con dinámica vital son:</p>
+                        <code class="equation">dS/dt = Λ - (βSI/N) - μS</code>
+                        <code class="equation">dI/dt = (βSI/N) - γI - μI</code>
+                        <code class="equation">dR/dt = γI - μR</code>
+                        <p>Haz clic en 'Reiniciar' para observar de nuevo.</p>`;
+                    
+                    if(arrowBirthS) arrowBirthS.style.opacity = 1; 
+                    if(labelBirthS) { labelBirthS.style.opacity = 1; labelBirthS.textContent = "Λ"; }
+                    if(arrowSToI) arrowSToI.style.opacity = 1; 
+                    if(labelSToI) { labelSToI.style.opacity = 1; labelSToI.textContent = "βSI/N"; }
+                    if(arrowIToR) arrowIToR.style.opacity = 1; 
+                    if(labelIToR) { labelIToR.style.opacity = 1; labelIToR.textContent = "γI"; }
+                    if(arrowDeathS) arrowDeathS.style.opacity = 1; 
+                    if(labelDeathS) { labelDeathS.style.opacity = 1; labelDeathS.textContent = "μS"; }
+                    if(arrowDeathI) arrowDeathI.style.opacity = 1; 
+                    if(labelDeathI) { labelDeathI.style.opacity = 1; labelDeathI.textContent = "μI"; }
+                    if(arrowDeathR) arrowDeathR.style.opacity = 1; 
+                    if(labelDeathR) { labelDeathR.style.opacity = 1; labelDeathR.textContent = "μR"; }
+                    if(nextButton) nextButton.disabled = true; 
+                    break;
+                default: explanationHTML = "<p>Haz clic en 'Reiniciar' para comenzar.</p>"; if(nextButton) nextButton.disabled = true; break;
+            }
+            if(explanationDiv) explanationDiv.innerHTML = explanationHTML;
+            sContainer.querySelectorAll('div > svg').forEach(svg => { if(!svg.classList.contains('susceptible')) {svg.classList.remove('infected', 'recovered'); svg.classList.add('susceptible');}});
+            iContainer.querySelectorAll('div > svg').forEach(svg => { if(!svg.classList.contains('infected')) {svg.classList.remove('susceptible', 'recovered'); svg.classList.add('infected');}});
+            rContainer.querySelectorAll('div > svg').forEach(svg => { if(!svg.classList.contains('recovered')) {svg.classList.remove('susceptible', 'infected'); svg.classList.add('recovered');}});
         }
 
-        function setupChart() {
-            const ctx = document.getElementById('sir-chart').getContext('2d');
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [0],
-                    datasets: [
-                        { label: 'Susceptibles (S)', data: [totalPopulation - 2], borderColor: 'var(--susceptible-color)', backgroundColor: 'rgba(96, 165, 250, 0.2)', fill: true, tension: 0.4 },
-                        { label: 'Infectados (I)', data: [2], borderColor: 'var(--infected-color)', backgroundColor: 'rgba(248, 113, 113, 0.2)', fill: true, tension: 0.4 },
-                        { label: 'Recuperados (R)', data: [0], borderColor: 'var(--recovered-color)', backgroundColor: 'rgba(52, 211, 153, 0.2)', fill: true, tension: 0.4 }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, max: totalPopulation, title: { display: true, text: 'Número de Personas' } },
-                        x: { title: { display: true, text: 'Tiempo (pasos de simulación)' } }
-                    },
-                    animation: { duration: 0 }
-                }
-            });
-        }
-        
-        function updateChart(s, i, r) {
-            timeStep++;
-            chart.data.labels.push(timeStep);
-            chart.data.datasets[0].data.push(s);
-            chart.data.datasets[1].data.push(i);
-            chart.data.datasets[2].data.push(r);
-            chart.update();
-        }
-        
-        betaSlider.addEventListener('input', updateParameters);
-        recoverySlider.addEventListener('input', updateParameters);
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            updateParameters();
-            setupSimulation();
-            setupChart();
-        });
+        document.addEventListener('DOMContentLoaded', resetSimulation);
 
     </script>
 </body>
